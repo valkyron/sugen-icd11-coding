@@ -34,27 +34,38 @@ def format_candidate_list(candidates: list[dict]) -> str:
 
 
 def get_llm_client():
-    """Resolve available LLM client: OpenAI or Anthropic SDK."""
+    """Resolve available LLM client: OpenAI, Azure OpenAI, or Anthropic SDK."""
     openai_key = os.environ.get("OPENAI_API_KEY")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
     openai_base_url = os.environ.get("OPENAI_BASE_URL")
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    openai_api_version = os.environ.get("OPENAI_API_VERSION")
 
     if openai_key:
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=openai_key, base_url=openai_base_url) if openai_base_url else OpenAI(api_key=openai_key)
+            if openai_api_version:
+                from openai import AzureOpenAI
+                client = AzureOpenAI(
+                    api_key=openai_key,
+                    azure_endpoint=openai_base_url,
+                    api_version=openai_api_version,
+                )
+            else:
+                from openai import OpenAI
+                client = OpenAI(api_key=openai_key, base_url=openai_base_url) if openai_base_url else OpenAI(api_key=openai_key)
             return ("openai", client, openai_model)
-        except Exception:
-            pass
+        except Exception as e:
+            if os.environ.get("DEBUG_LLM"):
+                print(f"[coder] Warning: failed to initialize OpenAI client: {e}")
 
     if anthropic_key:
         try:
             import anthropic
             anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
             return ("anthropic", anthropic.Anthropic(api_key=anthropic_key), anthropic_model)
-        except Exception:
-            pass
+        except Exception as e:
+            if os.environ.get("DEBUG_LLM"):
+                print(f"[coder] Warning: failed to initialize Anthropic client: {e}")
 
     return (None, None, None)
 
@@ -133,8 +144,8 @@ Task: Output up to 3 best matching codes in ranked order (best first). Return st
         if cleaned:
             return cleaned
 
-    except Exception:
-        # Graceful fallback on network error, invalid JSON, or timeout
-        pass
+    except Exception as e:
+        if os.environ.get("DEBUG_LLM"):
+            print(f"[coder] LLM call error for {note_id}: {e}")
 
     return rank_local_candidates(candidates, extracted_info)
