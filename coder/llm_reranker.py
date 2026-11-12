@@ -34,31 +34,25 @@ def format_candidate_list(candidates: list[dict]) -> str:
 
 
 def get_llm_client():
-    """Resolve available LLM client: OpenAI, Anthropic, or local development gateway."""
+    """Resolve available LLM client: OpenAI or Anthropic SDK."""
     openai_key = os.environ.get("OPENAI_API_KEY")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    nexus_key = os.environ.get("NEXUS_API_KEY")
-    nexus_endpoint = os.environ.get("NEXUS_ENDPOINT")
+    openai_base_url = os.environ.get("OPENAI_BASE_URL")
+    openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
     if openai_key:
         try:
             from openai import OpenAI
-            return ("openai", OpenAI(api_key=openai_key), "gpt-4o-mini")
-        except Exception:
-            pass
-
-    if nexus_key and nexus_endpoint:
-        try:
-            from openai import OpenAI
-            model = os.environ.get("NEXUS_MODEL", "gpt-4o-mini")
-            return ("nexus", OpenAI(api_key=nexus_key, base_url=nexus_endpoint), model)
+            client = OpenAI(api_key=openai_key, base_url=openai_base_url) if openai_base_url else OpenAI(api_key=openai_key)
+            return ("openai", client, openai_model)
         except Exception:
             pass
 
     if anthropic_key:
         try:
             import anthropic
-            return ("anthropic", anthropic.Anthropic(api_key=anthropic_key), "claude-3-5-haiku-latest")
+            anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
+            return ("anthropic", anthropic.Anthropic(api_key=anthropic_key), anthropic_model)
         except Exception:
             pass
 
@@ -92,7 +86,7 @@ Candidate ICD-11 Codes:
 Task: Output up to 3 best matching codes in ranked order (best first). Return strictly valid JSON: {{"codes": ["CODE1", "CODE2"]}}"""
 
     try:
-        if provider in ("openai", "nexus"):
+        if provider == "openai":
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[
