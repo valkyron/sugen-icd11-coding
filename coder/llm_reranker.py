@@ -45,9 +45,12 @@ def get_llm_client():
         try:
             if openai_api_version:
                 from openai import AzureOpenAI
+                azure_ep = (openai_base_url or "").rstrip("/")
+                if azure_ep.endswith("/v1"):
+                    azure_ep = azure_ep[:-3]
                 client = AzureOpenAI(
                     api_key=openai_key,
-                    azure_endpoint=openai_base_url,
+                    azure_endpoint=azure_ep,
                     api_version=openai_api_version,
                 )
             else:
@@ -98,17 +101,27 @@ Task: Output up to 3 best matching codes in ranked order (best first). Return st
 
     try:
         if provider == "openai":
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
+            kwargs = {
+                "model": model_name,
+                "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.0,
-                max_tokens=60,
-                timeout=timeout_secs,
-                response_format={"type": "json_object"} if "mini" in model_name or "gpt" in model_name else None,
-            )
+                "timeout": timeout_secs,
+            }
+            if "gpt" in model_name.lower() or "mini" in model_name.lower():
+                kwargs["response_format"] = {"type": "json_object"}
+
+            try:
+                # Modern models (gpt-4o, gpt-5, o-series) expect max_completion_tokens
+                kwargs["max_completion_tokens"] = 80
+                response = client.chat.completions.create(**kwargs)
+            except Exception:
+                kwargs.pop("max_completion_tokens", None)
+                kwargs["max_tokens"] = 80
+                kwargs["temperature"] = 0.0
+                response = client.chat.completions.create(**kwargs)
+
             # Track budget
             usage = response.usage
             if usage:
