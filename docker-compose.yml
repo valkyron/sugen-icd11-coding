@@ -1,0 +1,12 @@
+services:
+  coder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - HTTPS_PROXY
+      - HTTP_PROXY
+      - NO_PROXY
+    entrypoint: ["python", "-m", "coder.main"]
