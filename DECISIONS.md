@@ -82,3 +82,17 @@
 * **Measured Evidence:**
   - Matches the exact grading invocation: `docker compose run coder /in/notes.jsonl /out/predictions.jsonl`.
   - Zero external network downloads needed at runtime. Streams predictions line-by-line with `flush=True`.
+
+---
+
+### 10. Candidate Window Expansion to Top 25
+* **Date & Time:** 2026-11-12 03:20 UTC
+* **Decision:** Expand the candidate retrieval window fed from BM25 into the LLM reranker from Top 15 to Top 25 (`coder/llm_reranker.py` and `coder/main.py`).
+* **Options Considered:**
+  1. *Fixed Top 15*: Kept prompt size compact (~220 input tokens), but limited recall ceiling to 51.7% because 8 valid diagnoses sat between ranks 16 and 24.
+  2. *Top 25*: Increased candidate recall ceiling to 66.7%, exposing valid codes to the LLM without adding hardcoded extraction rules.
+  3. *Top 40+*: Introduced excessive distractor codes and diluted prompt attention.
+* **Measured Evidence:**
+  - Top-1 accuracy rose from 46.7% to **55.0%** (+5 notes correct).
+  - Dev score rose from 35.4 to **41.2 / 75.0 points** (+5.8 points).
+  - Spend was only **$0.01134** across all 60 notes (~$0.05 estimated for 300 notes), safely utilizing only ~5% of the $1.00 budget.

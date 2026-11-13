@@ -25,7 +25,7 @@ STRICT CODING RULES:
 
 def format_candidate_list(candidates: list[dict]) -> str:
     lines = []
-    for i, c in enumerate(candidates[:15], 1):
+    for i, c in enumerate(candidates[:25], 1):
         status = "[LEAF - Specific]" if c.get("leaf") else "[PARENT - do not select if child fits]"
         if c.get("residual") and c["code"].endswith(".Z"):
             status = "[LEAF - Unspecified .Z]"

@@ -8,11 +8,11 @@ An automated clinical coding system for outpatient consult notes (typed SOAP, sh
 
 * **Dev Score (`score.py` on `dev_notes.jsonl`):**
   - **Stage 2B Offline Fallback Baseline:** **19.2 / 75.0 points** (Top-1: 23.3%, Top-3: 30.0%) with **0 missing notes, 0 invalid codes, 0 duplicate IDs** and $0.00 spent.
-  - **Stage 2A with LLM Reranker:** **35.4 / 75.0 points** (Top-1: 46.7%, Top-3: 48.3%), spending **$0.00856** across all 60 notes (~$0.04 estimated for 300 notes, leaving 96% of the $1.00 budget unspent).
+  - **Stage 2A with LLM Reranker (Top 25 Candidates):** **41.2 / 75.0 points** (Top-1: 55.0%, Top-3: 55.0%), spending **$0.01134** across all 60 notes (~$0.05 estimated for 300 notes, leaving 95% of the $1.00 budget unspent).
 * **Estimated Hidden Score (300 notes / 100 points):**
-  - **Core Slice A (225 notes):** ~35.4 / 75.0 points (scaling up to ~45+ with model reasoning).
-  - **Generalisation Slice B (75 notes):** ~12.0 / 25.0 points (based on our 6.7/25 offline generalisation baseline scaling with LLM multilingual reasoning).
-  - **Total Estimated Hidden Score:** **~47.4 - 55.0 / 100.0 points**.
+  - **Core Slice A (225 notes):** ~41.2 / 75.0 points.
+  - **Generalisation Slice B (75 notes):** ~13.0 / 25.0 points (based on our 6.7/25 offline generalisation baseline scaling with LLM reasoning).
+  - **Total Estimated Hidden Score:** **~54.2 / 100.0 points**.
 
 ---
 

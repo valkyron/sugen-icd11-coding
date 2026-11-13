@@ -47,7 +47,7 @@ def process_notes(input_path: str, output_path: str):
 
             # Stage 1: Extraction & candidate retrieval
             extracted = extract_diagnostic_query(text)
-            candidates = retrieve_candidates(extracted["query_text"], top_k=20)
+            candidates = retrieve_candidates(extracted["query_text"], top_k=25)
 
             # Stage 2: Reranking (LLM if available/budget, else local fallback)
             pred_codes = rerank_with_llm(nid, text, candidates, extracted)
