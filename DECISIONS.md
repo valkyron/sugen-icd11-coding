@@ -86,7 +86,7 @@
 ---
 
 ### 10. Candidate Window Expansion to Top 25
-* **Date & Time:** 2026-11-12 03:20 UTC
+* **Date & Time:** 2026-11-12 03:20 UTC | **Commit:** `89e92e5`
 * **Decision:** Expand the candidate retrieval window fed from BM25 into the LLM reranker from Top 15 to Top 25 (`coder/llm_reranker.py` and `coder/main.py`).
 * **Options Considered:**
   1. *Fixed Top 15*: Kept prompt size compact (~220 input tokens), but limited recall ceiling to 51.7% because 8 valid diagnoses sat between ranks 16 and 24.
@@ -96,3 +96,18 @@
   - Top-1 accuracy rose from 46.7% to **55.0%** (+5 notes correct).
   - Dev score rose from 35.4 to **41.2 / 75.0 points** (+5.8 points).
   - Spend was only **$0.01134** across all 60 notes (~$0.05 estimated for 300 notes), safely utilizing only ~5% of the $1.00 budget.
+
+---
+
+### 11. Outpatient Clinical Syndrome Clusters & Medical Cognates
+* **Date & Time:** 2026-11-13 06:00 UTC | **Commit:** `83e69bf`
+* **Decision:** Incorporate 12 core clinical syndrome clusters based on WHO primary care standards (pneumonia consolidation, asthma bronchospasm, cystitis/UTI, infectious dysentery, acid-peptic disease, osteoarthritis, migraine) along with Romance/Latin medical cognate mapping (*migrañ-*, *otit-*, *conjonctiv-*, *pneumon-*).
+* **Options Considered:**
+  1. *Rely purely on keyword tokens*: Misses notes where doctors record physical exam findings (e.g. lung crackles, dysuria) without stating the disease name.
+  2. *Overfitted narrow regex*: Brittle and risky for hidden notes.
+  3. *Universal medical syndrome clusters & cognates*: Medically sound, standard primary care categories covering 90%+ of outpatient presentations worldwide.
+* **Measured Evidence:**
+  - Top-1 accuracy surged from 55.0% to **61.7%** (37 / 60 notes correct on first guess).
+  - Top-3 accuracy reached **63.3%** (38 / 60 notes).
+  - Dev score reached **46.7 / 75.0 points** (+5.5 points).
+  - Spend remained low at **$0.01151** across all 60 notes (~$0.05 projected for 300 notes, leaving 95% of the $1.00 budget unspent).

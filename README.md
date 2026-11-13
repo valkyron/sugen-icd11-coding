@@ -8,11 +8,11 @@ An automated clinical coding system for outpatient consult notes (typed SOAP, sh
 
 * **Dev Score (`score.py` on `dev_notes.jsonl`):**
   - **Stage 2B Offline Fallback Baseline:** **19.2 / 75.0 points** (Top-1: 23.3%, Top-3: 30.0%) with **0 missing notes, 0 invalid codes, 0 duplicate IDs** and $0.00 spent.
-  - **Stage 2A with LLM Reranker (Top 25 Candidates):** **41.2 / 75.0 points** (Top-1: 55.0%, Top-3: 55.0%), spending **$0.01134** across all 60 notes (~$0.05 estimated for 300 notes, leaving 95% of the $1.00 budget unspent).
+  - **Stage 2A with LLM Reranker & Clinical Clusters:** **46.7 / 75.0 points** (Top-1: 61.7%, Top-3: 63.3%), spending **$0.01151** across all 60 notes (~$0.05 estimated for 300 notes, leaving 95% of the $1.00 budget unspent).
 * **Estimated Hidden Score (300 notes / 100 points):**
-  - **Core Slice A (225 notes):** ~41.2 / 75.0 points.
-  - **Generalisation Slice B (75 notes):** ~13.0 / 25.0 points (based on our 6.7/25 offline generalisation baseline scaling with LLM reasoning).
-  - **Total Estimated Hidden Score:** **~54.2 / 100.0 points**.
+  - **Core Slice A (225 notes):** ~46.7 / 75.0 points.
+  - **Generalisation Slice B (75 notes):** ~14.0 / 25.0 points (scaling with multilingual cognates and cross-chapter medical root normalizer).
+  - **Total Estimated Hidden Score:** **~60.7 / 100.0 points**.
 
 ---
 
@@ -45,14 +45,20 @@ Because "malaria" flooded the query, BM25 ranked Malaria at Ranks 1–20 and Typ
 
 ---
 
-## Run Instructions
+## Run Instructions & Configuration
+
+### Environment Setup
+- Copy `.env.example` to `.env` or supply `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` directly via environment variables.
+- When no API key is provided, the engine automatically routes to Stage 2B offline fallback, ensuring valid predictions for 100% of notes.
 
 ```bash
-# Docker execution (as specified in brief)
+# Docker execution (as specified in brief; forwards credentials & HTTPS_PROXY)
 docker compose run coder /in/notes.jsonl /out/predictions.jsonl
 
-# Local evaluation
+# Local execution
 python -m coder.main data/dev_notes.jsonl out/predictions.jsonl
+
+# Offline evaluation (no API key required)
 python score.py --gold data/dev_notes.jsonl --pred out/predictions.jsonl --mms data/mms-2026-01.json
 ```
 
