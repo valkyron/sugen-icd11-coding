@@ -34,29 +34,16 @@ def format_candidate_list(candidates: list[dict]) -> str:
 
 
 def get_llm_client():
-    """Resolve available LLM client: OpenAI, Azure OpenAI, or Anthropic SDK."""
+    """Resolve available LLM client: OpenAI or Anthropic SDK."""
     openai_key = os.environ.get("OPENAI_API_KEY")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    openai_base_url = os.environ.get("OPENAI_BASE_URL")
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-    openai_api_version = os.environ.get("OPENAI_API_VERSION")
+    anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
 
     if openai_key:
         try:
-            if openai_api_version:
-                from openai import AzureOpenAI
-                azure_ep = (openai_base_url or "").rstrip("/")
-                if azure_ep.endswith("/v1"):
-                    azure_ep = azure_ep[:-3]
-                client = AzureOpenAI(
-                    api_key=openai_key,
-                    azure_endpoint=azure_ep,
-                    api_version=openai_api_version,
-                )
-            else:
-                from openai import OpenAI
-                client = OpenAI(api_key=openai_key, base_url=openai_base_url) if openai_base_url else OpenAI(api_key=openai_key)
-            return ("openai", client, openai_model)
+            from openai import OpenAI
+            return ("openai", OpenAI(api_key=openai_key), openai_model)
         except Exception as e:
             if os.environ.get("DEBUG_LLM"):
                 print(f"[coder] Warning: failed to initialize OpenAI client: {e}")
@@ -64,7 +51,6 @@ def get_llm_client():
     if anthropic_key:
         try:
             import anthropic
-            anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
             return ("anthropic", anthropic.Anthropic(api_key=anthropic_key), anthropic_model)
         except Exception as e:
             if os.environ.get("DEBUG_LLM"):

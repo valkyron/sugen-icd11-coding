@@ -64,4 +64,4 @@ python score.py --gold data/dev_notes.jsonl --pred out/predictions.jsonl --mms d
 
 ---
 
-Time spent: ~5.5 hours across problem analysis, WHO tabulation enrichment, pipeline implementation, generalisation testing, and containerization.
+Time spent: ~4 hours across problem analysis, WHO tabulation enrichment, pipeline implementation, generalisation testing, and containerization.

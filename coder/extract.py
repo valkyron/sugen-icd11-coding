@@ -171,6 +171,22 @@ def translate_micro_diagnostic(text: str) -> str:
 
             data = json.loads(resp.choices[0].message.content or "{}")
             return data.get("english_terms", "")
+
+        elif provider == "anthropic":
+            resp = client.messages.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=30,
+                timeout=4.0,
+            )
+            if hasattr(resp, "usage") and resp.usage:
+                GLOBAL_BUDGET.record_usage(resp.usage.input_tokens, resp.usage.output_tokens, model_name)
+            content = resp.content[0].text if resp.content else ""
+            import re
+            m = re.search(r"\{.*\}", content, re.DOTALL)
+            if m:
+                data = json.loads(m.group(0))
+                return data.get("english_terms", "")
     except Exception:
         pass
     return ""
