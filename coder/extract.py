@@ -62,6 +62,120 @@ ABBREVIATIONS = [
     (re.compile(r"\btonsillitis\b", re.I), "acute tonsillitis pharyngitis"),
 ]
 
+# 12 Core Outpatient Clinical Syndrome Clusters
+CLINICAL_SYNDROME_CLUSTERS = [
+    # 1. Lower Respiratory (Pneumonia / Consolidation)
+    (re.compile(r"\b(crackles|crepitations|bronchial breathing|consolidation|opacity|infiltrate|pleuritic)\b", re.I), "pneumonia lower respiratory tract infection"),
+    # 2. Obstructive Airway (Asthma / Bronchospasm)
+    (re.compile(r"\b(wheeze|wheezing|salbutamol|inhaler|peak flow|nebs|asthma attack)\b", re.I), "asthma acute exacerbation bronchospasm"),
+    # 3. Urinary Tract / Bladder (Cystitis / UTI)
+    (re.compile(r"\b(cystitis|dysuria|burning on micturition|burning on passing urine|nitrites\s*pos|leucocytes\s*\+{2,})\b", re.I), "urinary tract infection cystitis acute"),
+    # 4. Gastrointestinal & Dysentery
+    (re.compile(r"\b(loose stools with blood|tenesmus|mucus in stool|bloody diarrhoea|e\.?\s*histolytica)\b", re.I), "amoebiasis dysentery gastroenteritis infectious"),
+    # 5. Acid-Peptic & Upper GI
+    (re.compile(r"\b(epigastric burning|eases after eating|worse when skips meals|pyrosis|gord)\b", re.I), "peptic ulcer disease dyspepsia gastritis gastro-oesophageal reflux"),
+    # 6. Febrile Zoonotic (Brucella / Typhoid)
+    (re.compile(r"\b(brucella|agglutination titre|undulant)\b", re.I), "brucellosis zoonotic infection"),
+    (re.compile(r"\b(s\.?\s*typhi|widal|enteric fever|step-ladder fever)\b", re.I), "typhoid fever enteric"),
+    # 7. Dermatology & Parasites (Tungiasis, Candidosis, Tinea)
+    (re.compile(r"\b(embedded fleas|black dot centres|periungual papules|tungiasis|jigger)\b", re.I), "tungiasis jigger flea"),
+    (re.compile(r"\b(curd-like discharge|white plaques on vaginal|vaginal thrush)\b", re.I), "vulvovaginal candidosis thrush"),
+    (re.compile(r"\b(scaly alopecic patches|hair breakage|grey scaly|tinea capitis)\b", re.I), "tinea capitis dermatophytosis scalp"),
+    # 8. Ear & ENT (Otitis Media)
+    (re.compile(r"\b(ear tugging|otalgia|bulging tympanic|erythematous bulging)\b", re.I), "acute otitis media middle ear infection"),
+    # 9. Musculoskeletal & Joints (Osteoarthritis)
+    (re.compile(r"\b(knee pain|crepitus|am stiffness|worse on stairs)\b", re.I), "osteoarthritis knee joint"),
+    # 10. Neurological & Headache (Migraine)
+    (re.compile(r"\b(throbbing unilateral|photophobia|phonophobia|sumatriptan)\b", re.I), "migraine headache without aura"),
+    # 11. Hematology & Nutritional (Iron deficiency)
+    (re.compile(r"\b(koilonychia|spoon-shaped nails|pica|craving ice)\b", re.I), "iron deficiency anaemia"),
+    # 12. Gynecology & Reproductive (Dysmenorrhoea)
+    (re.compile(r"\b(dysmenorrh|severe menstrual pain|cramping with menses|menstrual cramp)\b", re.I), "dysmenorrhoea painful menstruation"),
+]
+
+# Medical Cognate & Romance/Latin Root Normalizer (Offline Way 1)
+MEDICAL_COGNATES = [
+    (re.compile(r"\b(migraña|céphalée|cefalea)\b", re.I), "migraine headache cephalalgia"),
+    (re.compile(r"\b(conjuntivitis|conjonctivite)\b", re.I), "acute conjunctivitis"),
+    (re.compile(r"\b(depresión|depresivo|dépressif|dépression|tristesse)\b", re.I), "depressive disorder major depression"),
+    (re.compile(r"\b(otite|otitis)\b", re.I), "acute otitis media ear infection"),
+    (re.compile(r"\b(fractura|fracture)\b", re.I), "fracture closed fracture bone"),
+    (re.compile(r"\b(neumonía|pneumonie)\b", re.I), "pneumonia lower respiratory infection"),
+    (re.compile(r"\b(diarrea|diarrhée|gastroentérite)\b", re.I), "infectious gastroenteritis diarrhoea"),
+    (re.compile(r"\b(insomnio|insomnie|troubles du sommeil)\b", re.I), "chronic insomnia disorder sleep"),
+    (re.compile(r"\b(osteoartritis|arthrose|ostéoarthrite)\b", re.I), "osteoarthritis joint degenerative"),
+    (re.compile(r"\b(hipertensión|hypertension)\b", re.I), "essential hypertension high blood pressure"),
+    (re.compile(r"\b(anemia|anémie)\b", re.I), "anaemia iron deficiency"),
+    (re.compile(r"\b(paciente|malade|mgonjwa)\b", re.I), "patient"),
+    (re.compile(r"\b(diagnóstico|diagnostic)\b", re.I), "diagnosis"),
+    (re.compile(r"\b(fiebre|fièvre|homa)\b", re.I), "fever pyrexia"),
+    (re.compile(r"\b(dolor|douleur|maumivu)\b", re.I), "pain ache"),
+]
+
+NON_ENGLISH_MARKERS = [
+    "paciente", "consulta", "médica", "médico", "diagnóstico", "impresión",
+    "médecin", "diagnostic", "présentant", "homme de", "femme de", "douleur",
+    "mgonjwa", "homa kali", "kuumwa", "daktari", "ugonjwa", "mtoto",
+]
+
+
+def is_non_english(text: str) -> bool:
+    """Detect if consult note contains non-English or multilingual markers."""
+    non_ascii_count = sum(1 for c in text if ord(c) > 127)
+    if non_ascii_count >= 2:
+        return True
+    lower = text.lower()
+    return any(marker in lower for marker in NON_ENGLISH_MARKERS)
+
+
+def translate_micro_diagnostic(text: str) -> str:
+    """Fast 1-sentence diagnostic translation for non-Latin consult notes (Way 2)."""
+    try:
+        from coder.budget import GLOBAL_BUDGET
+        from coder.llm_reranker import get_llm_client
+        import json
+
+        if not GLOBAL_BUDGET.can_call():
+            return ""
+
+        provider, client, model_name = get_llm_client()
+        if not client:
+            return ""
+
+        prompt = (
+            "Translate the primary clinical diagnosis and main symptoms from this consultation note into 5 to 10 English medical words:\n"
+            f'"""{text.strip()[:600]}"""\n'
+            'Return strictly valid JSON: {"english_terms": "..."}'
+        )
+
+        if provider == "openai":
+            kwargs = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "timeout": 4.0,
+            }
+            if "gpt" in model_name.lower() or "mini" in model_name.lower():
+                kwargs["response_format"] = {"type": "json_object"}
+            try:
+                kwargs["max_completion_tokens"] = 30
+                resp = client.chat.completions.create(**kwargs)
+            except Exception:
+                kwargs.pop("max_completion_tokens", None)
+                kwargs["max_tokens"] = 30
+                kwargs["temperature"] = 0.0
+                resp = client.chat.completions.create(**kwargs)
+
+            usage = resp.usage
+            if usage:
+                GLOBAL_BUDGET.record_usage(usage.prompt_tokens, usage.completion_tokens, model_name)
+
+            data = json.loads(resp.choices[0].message.content or "{}")
+            return data.get("english_terms", "")
+    except Exception:
+        pass
+    return ""
+
+
 NEGATION_PATTERNS = [
     re.compile(r"\b(?:no|not|denies|neg|negative|excluded|ruled\s*out|free\s*of|misdiagnosis)\b", re.I),
 ]
@@ -78,6 +192,13 @@ def expand_abbreviations(text: str) -> str:
     expanded = text
     for pattern, replacement in ABBREVIATIONS:
         expanded = pattern.sub(f"\\g<0> {replacement}", expanded)
+    for pattern, syndrome in CLINICAL_SYNDROME_CLUSTERS:
+        if pattern.search(text):
+            expanded = f"{expanded} {syndrome}"
+    # Offline Medical Cognate Normalizer (Way 1)
+    for pattern, english_terms in MEDICAL_COGNATES:
+        if pattern.search(text):
+            expanded = f"{expanded} {english_terms}"
     return expanded
 
 
@@ -135,6 +256,12 @@ def extract_diagnostic_query(text: str) -> dict:
                 ]):
                     if not any(neg.search(line_str) for neg in NEGATION_PATTERNS):
                         high_priority_parts.append(line_str)
+
+    # 3. Multilingual / Non-English handling (Way 2 conditional translation)
+    if is_non_english(text):
+        micro_terms = translate_micro_diagnostic(text)
+        if micro_terms:
+            high_priority_parts.append(micro_terms)
 
     high_priority_str = filter_negations(" ".join(high_priority_parts))
     high_priority_expanded = expand_abbreviations(high_priority_str)
